@@ -1,0 +1,52 @@
+#define gas1 A0
+#define gas2 A1
+#define gas3 A2
+
+int gas1value,gas2value,gas3value;
+void setup()
+{
+  Serial.begin(9600);  
+  Serial.print("0");
+  pinMode(gas1,INPUT);
+  pinMode(gas2,INPUT);
+  pinMode(gas3,INPUT);
+}
+
+void loop()
+{
+  gas1value=analogRead(gas1);
+  gas1value=map(gas1value,0,1023,0,100);
+ 
+
+  gas2value=analogRead(gas2);
+  gas2value=map(gas2value,400,1023,0,100);
+
+  gas3value=analogRead(gas3);
+  gas3value=map(gas3value,0,700,0,100);
+
+if(gas1value<=0){gas1value=0;}
+if(gas2value<=0){gas2value=0;}
+if(gas3value<=0){gas3value=0;}
+
+  senddata();
+  delay(300);
+
+  
+}
+
+void senddata()
+  {
+    Serial.print('*');
+
+  if(gas1value<=9){Serial.print("00"); Serial.print(gas1value);}
+  else if(gas1value<=99){Serial.print("0"); Serial.print(gas1value);}
+  else if(gas1value<=999){Serial.print(""); Serial.print(gas1value);}
+  
+  if(gas2value<=9){Serial.print("00"); Serial.print(gas2value);}
+  else if(gas2value<=99){Serial.print("0"); Serial.print(gas2value);}
+  else if(gas2value<=999){Serial.print(""); Serial.print(gas2value);}
+
+  if(gas3value<=9){Serial.print("00"); Serial.print(gas3value);}
+  else if(gas3value<=99){Serial.print("0"); Serial.print(gas3value);}
+  else if(gas3value<=999){Serial.print(""); Serial.print(gas3value);}
+  }
