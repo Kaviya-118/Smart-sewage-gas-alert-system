@@ -1,0 +1,260 @@
+//e2508iot@gotgel.org
+//Info@2023
+#define BLYNK_PRINT Serial    
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+
+#include <LCD_I2C.h>
+LCD_I2C lcd(0x27); // Default address of most PCF8574 modules, change according
+
+
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+
+
+#define BLYNK_TEMPLATE_ID "TMPL3WqpL-9Uu"
+#define BLYNK_TEMPLATE_NAME "SEWAGE  MONITORING"
+#define BLYNK_AUTH_TOKEN "Eq6k5RXxe6Dk-28SQnc5BKmQZxvyKX1N"
+
+char auth[] = BLYNK_AUTH_TOKEN;
+
+
+SoftwareSerial GPS_SoftSerial(D3, D4);/* (Rx, Tx) */
+SoftwareSerial mySerial(D5, D6);/* (Rx, Tx) */
+TinyGPSPlus gps;      
+
+volatile float minutes, seconds;
+volatile int degree, secs, mins;
+float latn,longn;
+
+
+     double lat_val, lng_val, alt_m_val;
+     uint8_t hr_val, min_val, sec_val;
+     bool loc_valid, alt_valid, time_valid;
+
+char ssid[] = "IOT";
+char pass[] = "123456789";
+
+unsigned int m=0,act=1,val,val1,val2,val3,val4,val5;
+String inputString = ""; 
+
+unsigned char a[200];
+String s = "www.google.com/maps/dir/";  
+int tdscut=50;
+void setup()
+{
+  Serial.begin(9600);
+  lcd.begin(); // If you are using more I2C devices using the Wire library use lcd.begin(false)            // this stop the library(LCD_I2C) from calling Wire.begin()
+ lcd.backlight();
+ lcd.setCursor(0,0);
+ lcd.setCursor(0,0);
+ lcd.print("SEWAGE MONITORING");
+ 
+ Blynk.begin(auth, ssid, pass, "blynk.cloud", 80);
+ GPS_SoftSerial.begin(9600); /* Define baud rate for software serial communication */
+ mySerial.begin(9600); 
+ lcd.clear();
+}
+
+void loop()
+{
+   gpsread();  
+  rec();
+  delay(500);       
+  delay(100);
+  Blynk.virtualWrite(V0,val);
+      
+  delay(100);
+  Blynk.virtualWrite(V1,val1);
+
+  delay(100);
+  Blynk.virtualWrite(V2,val2);
+  delay(100);
+  if(val>=100){val=100;}
+  if(val1>=100){val1=100;}
+  if(val2>=100){val2=100;}
+
+  if(val<=0){val=0;}
+  if(val1<=0){val1=0;}
+  if(val2<=0){val2=0;}
+  lcd.setCursor(0,0);
+  lcd.print("G1:");
+  if(val<=9){lcd.print("00"); lcd.print(val);}
+  else if(val<=99){lcd.print("00"); lcd.print(val);}
+  else if(val<=999){lcd.print("0"); lcd.print(val);}
+
+  lcd.setCursor(0,1);
+  lcd.print("G2:");
+  if(val1<=9){lcd.print("00"); lcd.print(val1);}
+  else if(val1<=99){lcd.print("00"); lcd.print(val1);}
+  else if(val1<=999){lcd.print("0"); lcd.print(val1);}
+
+  lcd.setCursor(9,0);
+  lcd.print("G3:");
+  if(val2<=9){lcd.print("00"); lcd.print(val2);}
+  else if(val2<=99){lcd.print("00"); lcd.print(val2);}
+  else if(val2<=999){lcd.print("0"); lcd.print(val2);}
+  
+       delay(100);
+       
+
+
+
+if(val>=50 || val1>=50 || val2>=30)
+    {
+    Blynk.virtualWrite(V4,"HIGH TOXIC LEVEL!");
+    lcd.clear();
+    lcd.print("MSG SENDING....");
+    Serial.println("gsm msg sending");
+  SendMessage();
+  lcd.clear();
+  Blynk.virtualWrite(V4,"               ");
+}
+Blynk.virtualWrite(V3,"LAT: "+String(lat_val,6)+"LNG: "+String(lng_val,6));
+
+      Blynk.run();
+      delay(100);
+}
+
+
+
+void rec()
+  {
+      while(Serial.available())
+    {
+        char data;
+        data=Serial.read();
+  
+        a[m]=data;
+          if(a[0] == '*')
+          {
+            if(m<=9)
+            {m++;}
+          }
+      }
+      if(m > 1)
+      {
+        val = (a[1]-0x30)*100 + (a[2]-0x30)*10  + (a[3] - 0x30);
+        val1 = (a[4]-0x30)*100 + (a[5]-0x30)*10  + (a[6] - 0x30);
+        val2 = (a[7]-0x30)*100 + (a[8]-0x30)*10  + (a[9] - 0x30);
+        m=0;
+      }
+  }
+
+
+void gpsread()
+  {
+    
+       smartDelay(200); /* Generate precise delay of 1ms */
+        unsigned long start;
+   
+        lat_val = gps.location.lat(); /* Get latitude data */
+        loc_valid = gps.location.isValid(); /* Check if valid location data is available */
+        lng_val = gps.location.lng(); /* Get longtitude data */
+        alt_m_val = gps.altitude.meters();  /* Get altitude data in meters */
+        alt_valid = gps.altitude.isValid(); /* Check if valid altitude data is available */
+        hr_val = gps.time.hour(); /* Get hour */
+        min_val = gps.time.minute();  /* Get minutes */
+        sec_val = gps.time.second();  /* Get seconds */
+        time_valid = gps.time.isValid();  /* Check if valid time data is available */
+      
+            
+        if (!loc_valid)
+        {    
+                
+          Serial.print("Latitude : ");
+          Serial.println("*");
+          Serial.print("Longitude : ");
+          Serial.println("*");
+        }
+        else
+        {
+          DegMinSec(lat_val);
+       
+          DegMinSec(lng_val); /* Convert the decimal degree value into degrees minutes seconds form */
+        
+          longn=(lng_val, 6);
+      
+        }
+        if (!alt_valid)
+        {
+          
+        }
+        else
+        {
+         
+        }
+        if (!time_valid)
+        {
+          
+        }
+        else
+        {
+          char time_string[32];
+          sprintf(time_string, "Time : %02d/%02d/%02d \n", hr_val, min_val, sec_val);
+          Serial.print(time_string);    
+        }
+   
+
+if(!alt_valid){lat_val=11.1014924;lng_val=76.9655143;}
+
+s = "www.google.com/maps/dir/";
+s += String(lat_val, 6);
+  s += ",";
+  s += String(lng_val, 6);
+  s += "/";
+  }
+
+
+
+
+  static void smartDelay(unsigned long ms)
+{
+  unsigned long start = millis();
+  do 
+  {
+    while (GPS_SoftSerial.available())  /* Encode data read from GPS while data is available on serial port */
+      gps.encode(GPS_SoftSerial.read());
+/* Encode basically is used to parse the string received by the GPS and to store it in a buffer so that information can be extracted from it */
+  } while (millis() - start < ms);
+}
+
+void DegMinSec( double tot_val)   /* Convert data in decimal degrees into degrees minutes seconds form */
+{  
+  degree = (int)tot_val;
+  minutes = tot_val - degree;
+  seconds = 60 * minutes;
+  minutes = (int)seconds;
+  mins = (int)minutes;
+  seconds = seconds - minutes;
+  seconds = 60 * seconds;
+  secs = (int)seconds;
+}
+
+
+
+
+ void SendMessage()
+
+
+{
+
+  mySerial.println("AT+CMGF=1");    //Sets the GSM Module in Text Mode
+
+  delay(2000);  // Delay of 1000 milli seconds or 1 second
+
+  mySerial.println("AT+CMGS=\"+918072071864\"\r"); // Replace x with mobile number
+
+  delay(2000);
+
+  mySerial.println("SEWAGE MONITORING : HIGH TOXIC LEVEL ");
+
+  mySerial.print("LOCATION :");
+  mySerial.println(s);
+  delay(100);
+
+  mySerial.println((char)26);// ASCII code of CTRL+Z
+
+  delay(4000);
+
+}
